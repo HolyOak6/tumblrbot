@@ -38,6 +38,7 @@ dadjokes_url= "https://icanhazdadjoke.com/"
 
 #______________________________________________________Get a photo using ID
 def get_photo():
+    """gets a photo from unsplash based on that photo's id (found at the end of the photo's url)"""
     photo_id = input("What is the ID of the photo you'd like?       ")
     # photo_id = "NuHrMrC5rlk"
     unsp_getphoto_url=f"https://api.unsplash.com/photos/{photo_id}"
@@ -67,6 +68,8 @@ def get_photo():
     return photo_info
 
 def get_from_likes(n=None):
+    """Pulls a number n of photos from the liked photos from the desired Unsplash profile
+        if no n provided, n=random number"""
     endpoint = f"/users/{unsp_username}/likes"
     params = {
         "username" : unsp_username,
@@ -114,11 +117,22 @@ def fetch_and_resize_image(url, target_width):
     img = img.resize((target_width, h_size), Image.LANCZOS)
     return img
 
-def get_random_background_image():
+def get_random_background_image(query=None):
+    """from Unsplash"""
     random_endpoint = "/photos/random"
-    query = "sunset, clouds, mountains, night sky, aurora, coffee cup, blossoms"
+
+    # Default list of queries
+    if query is None:
+        query = ["sunset", "clouds", "mountains", "night sky", "aurora", "coffee cup", "blossoms"]
+
+    # If a single string is passed, wrap it in a list
+    if isinstance(query, str):
+        query = [query]
+
+    # Now you can loop through or randomly choose one
+    chosen_query = rd.choice(query)
     params = {
-        "query" : query,
+        "query" : chosen_query,
         "orientation" : "landscape"
     }
     try:
@@ -147,6 +161,8 @@ def get_random_background_image():
     return photo_info
 
 def get_dadjoke():
+    """Retrieve dad joke from icanhazdadjoke api
+        returns joke as string"""
     headers = {"Accept": "application/json"}
     try:
         response = requests.get(dadjokes_url, headers=headers)
@@ -160,7 +176,9 @@ def get_dadjoke():
 
 
 def combine_quote_and_image():
-    bg_url = get_random_background_image()["url"]
+    """Uses pillow to combine random image from Unsplash and dad joke into a single meme. Returns image as a PIL.Image.
+    May need further manipulation in order to use image object."""
+    bg_url = get_random_background_image(query=["laughing, laugh"])["url"]
     joke = get_dadjoke()
 
     # Fetch and resize the image to a consistent width

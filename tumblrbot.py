@@ -18,6 +18,8 @@ request_token_url= "https://www.tumblr.com/oauth/request_token"
 authorization_base_url= "https://www.tumblr.com/oauth/authorize"
 access_token_url= "https://www.tumblr.com/oauth/access_token"
 
+"""Initial OATH setup"""
+
 # # Credentials from the application page
 # consumer_key = os.getenv("TUMBLR_CONSUMER_KEY")
 # consumer_secret = os.getenv("TUMBLR_CONSUMER_SECRET")
@@ -98,7 +100,7 @@ except Exception as e:
     print(f"API call failed: {e}")
     sys.exit(1)
 
-
+"""Create your own tags_list or edit the following"""
 
 tags_list = [
     "dark_fantasy", "gothic", "dark_love", "dark_passion", "skull_aesthetic", "dark_mind", "gothic_love",
@@ -115,7 +117,22 @@ tags_list = [
     "jonas kunickas", "matt bailey", "sara punt", "viktoria lapteva",
 ]
 #____________________________________________________________Basic tools
+
 def create_text_post(client, blog_name, title, body, tags):
+    """
+    Create a text post on a specified Tumblr blog.
+
+    Parameters:
+        client: Tumblr API client instance used to make the request.
+        blog_name (str): The name of the blog where the post will be published.
+        title (str): The title of the text post.
+        body (str): The main content of the post.
+        tags (list of str): A list of tags to attach to the post.
+
+    Returns:
+        dict or None: The API response if the post was successfully created,
+        None if an error occurred.
+    """
     try:
         response = client.create_text(blog_name, title=title, body=body, tags=tags)
 
@@ -132,6 +149,20 @@ def create_text_post(client, blog_name, title, body, tags):
         return None
 
 def create_photo_post(client, blog_name, photo_url, caption, tags):
+    """
+        Create a photo post on a specified Tumblr blog.
+
+        Parameters:
+            client: Tumblr API client instance used to make the request.
+            blog_name (str): The name of the blog where the post will be published.
+            photo_url (str): url of the image.
+            caption (str): caption.
+            tags (list of str): A list of tags to attach to the post.
+
+        Returns:
+            dict or None: The API response if the post was successfully created,
+            None if an error occurred.
+        """
     try:
         response = client.create_photo(
             blogname=blog_name,
@@ -148,6 +179,13 @@ def create_photo_post(client, blog_name, photo_url, caption, tags):
         return None
 
 def shuffle_queue(client, blog_identifier):
+    """
+        Shuffle blog's queue.
+
+        client: Tumblr API client instance used to make the request.
+        blog_identifier (str): The name of the blog where the post will be published.
+        return successful or not.
+    """
     session = OAuth1Session(
         os.getenv("TUMBLR_CONSUMER_KEY"),
         client_secret=os.getenv("TUMBLR_CONSUMER_SECRET"),
@@ -166,15 +204,42 @@ def shuffle_queue(client, blog_identifier):
         print(response.json())
 
 def like_post(client, post_id, reblog_key):
+    """
+        likes post
+        post_id: id of the posted wanting to like.
+        reblog_key: key used to reblog or like desired post.
+    """
     return client.like(post_id, reblog_key)
 
 def is_reblog_worthy(post):
+    """
+        Determine whether a Tumblr post is suitable for reblogging.
+
+        Checks:
+        - Post caption and summary for blacklisted words.
+        - Post length (caption or summary should not exceed 70 characters).
+
+        Args:
+            post (dict): A dictionary representing a Tumblr post, expected to have
+                         'caption', 'summary', and 'tags' keys.
+
+        Returns:
+            bool: True if the post passes all checks and is reblog-worthy, False otherwise.
+        """
     caption = post.get('caption', '').lower()
     summary = post.get('summary', '').lower()
 
     tags = [tag.lower() for tag in post.get('tags', [])]
-    blacklisted_words = ["spoilers", "ai art", "ai_art", "price", "ai", "generated", "shitpost", "product", "etsy", "http", "gross", "shitposter", "spoil", "buy", "restored", "collectible", "sale", "discount", "shop", "promo", "link in bio", "store", "trans", "lesbian", "gay", "transgender", "genderfluid", "order now"]
-
+    blacklisted_words = [
+        "spoilers", "ai art", "ai_art", "ai-generated", "generated", "ai", "machine learning",
+        "shitpost", "shitposter", "meme dump", "nsfw", "explicit", "porn", "sex", "erotic",
+        "adult", "nudity", "price", "buy", "sale", "discount", "restored", "collectible", "product",
+        "etsy", "amazon", "shop", "promo", "link in bio", "store", "order now", "preorder",
+        "subscribe", "donate", "patreon", "paypal", "fundraiser", "crowdfunding",
+        "gross", "spam", "clickbait", "viral", "giveaway", "contest", "free", "offer", "limited time",
+        "trans", "lesbian", "gay", "queer", "transgender", "genderfluid", "nonbinary", "nb",
+        "http", "https", "www", ".com", ".net", ".org"
+    ]
     for word in blacklisted_words:
         if word in caption or word in summary:
             print(f"Rejected because: blacklisted word '{word}'")
@@ -191,7 +256,7 @@ def generate_comment():
         "woah", "nice", "🔥",
         "this.", "queued", "kyood",
         "vibe", "save-worthy", "damn", "art", "queued",  "cool", "good stuff",
-        "liked", "queueing this", "worth the reblog", "👌", "👍", "🙌", "fire"
+        "liked", "queueing this", "reblogged", "👌", "👍", "🙌", "fire"
     ]
     return random.choice(comments)
 
@@ -249,29 +314,6 @@ def get_posts_using_single_tag(tag, num):
 
     return response
 
-def list_joined_communities():
-    session = OAuth1Session(
-        os.getenv("TUMBLR_CONSUMER_KEY"),
-        client_secret=os.getenv("TUMBLR_CONSUMER_SECRET"),
-        resource_owner_key=os.getenv("oauth_token"),
-        resource_owner_secret=os.getenv("oauth_token_secret")
-    )
-    response = session.get("https://api.tumblr.com/v2/communities")
-    return response.json()
-
-
-def get_community_posts(community_handle):
-    session = OAuth1Session(
-        os.getenv("TUMBLR_CONSUMER_KEY"),
-        client_secret=os.getenv("TUMBLR_CONSUMER_SECRET"),
-        resource_owner_key=os.getenv("oauth_token"),
-        resource_owner_secret=os.getenv("oauth_token_secret")
-    )
-
-    response = session.get(
-        f"https://api.tumblr.com/v2/communities/{community_handle}/timeline",
-    )
-    return response.json()
 
 def get_posts_using_random_tag_from_list(tags, num):
     tags= tags
@@ -334,6 +376,60 @@ def mass_like(tags, num):
             )
             print("liked")
 
+
+###__________________________________________Community stuff
+def list_joined_communities():
+    """Community api is not efficient, and many community items do not function"""
+
+    session = OAuth1Session(
+        os.getenv("TUMBLR_CONSUMER_KEY"),
+        client_secret=os.getenv("TUMBLR_CONSUMER_SECRET"),
+        resource_owner_key=os.getenv("oauth_token"),
+        resource_owner_secret=os.getenv("oauth_token_secret")
+    )
+    response = session.get("https://api.tumblr.com/v2/communities")
+    return response.json()
+
+
+def get_community_posts(community_handle):
+    session = OAuth1Session(
+        os.getenv("TUMBLR_CONSUMER_KEY"),
+        client_secret=os.getenv("TUMBLR_CONSUMER_SECRET"),
+        resource_owner_key=os.getenv("oauth_token"),
+        resource_owner_secret=os.getenv("oauth_token_secret")
+    )
+
+    response = session.get(
+        f"https://api.tumblr.com/v2/communities/{community_handle}/timeline",
+    )
+    return response.json()
+
+def react_to_community_post(community_handle, post_id):
+    session = OAuth1Session(
+        os.getenv("TUMBLR_CONSUMER_KEY"),
+        client_secret=os.getenv("TUMBLR_CONSUMER_SECRET"),
+        resource_owner_key=os.getenv("oauth_token"),
+        resource_owner_secret=os.getenv("oauth_token_secret")
+    )
+
+    body = {
+        "slug": ":green_heart:"
+    }
+
+    url = f"https://api.tumblr.com/v2/communities/{community_handle}/post/{post_id}/reactions"
+
+    try:
+        response = session.put(url, json=body)
+        data = response.json()
+        if response.status_code in (200, 201):
+            print(f"💚 Reacted to post {post_id} in {community_handle}")
+            return True
+        else:
+            print(f"Failed with status {response.status_code}: {data}")
+            return False
+    except Exception as e:
+        print(f"Request failed: {e}")
+        return False
 
 #_____________________________________________get and reblog_to_queue
 
@@ -430,35 +526,20 @@ def post_to_queue_using_own_blog_posts():
             )
     # shuffle_queue(client, my_blog_name)
 
-def react_to_community_post(community_handle, post_id):
-    session = OAuth1Session(
-        os.getenv("TUMBLR_CONSUMER_KEY"),
-        client_secret=os.getenv("TUMBLR_CONSUMER_SECRET"),
-        resource_owner_key=os.getenv("oauth_token"),
-        resource_owner_secret=os.getenv("oauth_token_secret")
-    )
-
-    body = {
-        "slug": ":green_heart:"
-    }
-
-    url = f"https://api.tumblr.com/v2/communities/{community_handle}/post/{post_id}/reactions"
-
-    try:
-        response = session.put(url, json=body)
-        data = response.json()
-        if response.status_code in (200, 201):
-            print(f"💚 Reacted to post {post_id} in {community_handle}")
-            return True
-        else:
-            print(f"Failed with status {response.status_code}: {data}")
-            return False
-    except Exception as e:
-        print(f"Request failed: {e}")
-        return False
 
 
 def queue_from_Unsplash():
+
+    ""    """
+    Retrieves a photo from the bot's liked Unsplash images and posts it to Tumblr.
+
+    The function fetches a random liked photo from Unsplash using the content bot,
+    builds a caption including the artist's name, and then creates a photo post 
+    on the configured Tumblr blog with relevant tags.
+
+    Returns:
+        None
+    """
     # # Ask the user for the photo ID
     # photo_id = input("What is the ID of the photo you'd like to share to Tumblr? ")
 
@@ -506,6 +587,17 @@ def queue_multiple_unsplash():
         )
 
 def queue_dad_joke():
+    """
+       Generates a dad joke image and optionally queues it as a photo post on Tumblr.
+
+       The function uses the content bot to combine a dad joke with a background image,
+       prompts the user to confirm posting, saves the image temporarily, and then creates
+       a queued photo post on the configured Tumblr blog with predefined tags. The temporary
+       file is deleted afterward.
+
+       Returns:
+           None
+       """
     image = cbot.combine_quote_and_image()  # PIL.Image
     postit = input("Whould you like to post it? y or no?  ").lower()
     if postit == "y":
@@ -532,4 +624,4 @@ def queue_dad_joke():
 
 #______________________play
 
-shuffle_queue()
+queue_dad_joke()

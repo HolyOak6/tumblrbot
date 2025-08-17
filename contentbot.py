@@ -2,23 +2,19 @@ import requests
 import os
 from pprint import pprint
 from dotenv import load_dotenv
+import random as rd
+
 
 load_dotenv()
 unsp_access_key = os.getenv("UNSP_ACCESS_KEY")
 unsp_key = os.getenv("UNSP_SECRET_KEY")
 unsp_app_id = os.getenv("UNSP_APPLICATION_ID")
+unsp_username = os.getenv("UNSP_USERNAME")
 
 headers = {
     "Authorization": f"Client-ID {unsp_access_key}"
 }
-
-
-#______________________________________________________Get a photo using ID
-def get_photo():
-    photo_id = input("What is the ID of the photo you'd like?       ")
-    # photo_id = "NuHrMrC5rlk"
-    unsp_getphoto_url=f"https://api.unsplash.com/photos/{photo_id}"
-    stopwords = {
+stopwords = {
         "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are",
         "aren't", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both",
         "but", "by", "can't", "cannot", "could", "couldn't", "did", "didn't", "do", "does", "doesn't",
@@ -37,6 +33,13 @@ def get_photo():
         "won't", "would", "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your", "yours",
         "yourself", "yourselves"
     }
+
+#______________________________________________________Get a photo using ID
+def get_photo():
+    photo_id = input("What is the ID of the photo you'd like?       ")
+    # photo_id = "NuHrMrC5rlk"
+    unsp_getphoto_url=f"https://api.unsplash.com/photos/{photo_id}"
+
     try:
         response = requests.get(url=unsp_getphoto_url, headers=headers)
         response.raise_for_status()  # Raises an exception for HTTP errors
@@ -51,7 +54,7 @@ def get_photo():
     photo_url = photo_data["urls"]["full"]
     slug_parts = photo_data["slug"].split("-")
     tags = [word for word in slug_parts[:-1] if word not in stopwords]
-    print(tags)
+
     photo_info = {
         "url": photo_url,
         "tags": tags,  # tag processing function
@@ -60,3 +63,35 @@ def get_photo():
         "caption_text": " ".join(slug_parts[:-1])
     }
     return photo_info
+
+def get_from_likes():
+    endpoint = f"/users/{unsp_username}/likes"
+    params = {
+        "username" : unsp_username,
+    }
+    try:
+        response = requests.get(url=f"https://api.unsplash.com/{endpoint}", headers=headers, params=params)
+        response.raise_for_status()  # Raises an exception for HTTP errors
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching photo: {e}")
+        return None  # stop here if request fails
+    else:
+        photo_data = response.json()
+
+    n = rd.randint(0,9)
+    first_name = photo_data[n]["user"]["first_name"]
+    last_name = photo_data[n]["user"]["last_name"]
+    photo_url = photo_data[n]["urls"]["full"]
+    slug_parts = photo_data[n]["slug"].split("-")
+    tags = [word for word in slug_parts[:-1] if word not in stopwords]
+
+    photo_info = {
+        "url": photo_url,
+        "tags": tags,  # tag processing function
+        "artist_first_name": first_name,
+        "artist_last_name": last_name,
+        "caption_text": " ".join(slug_parts[:-1])
+    }
+    print(photo_info["caption_text"])
+    return photo_info
+

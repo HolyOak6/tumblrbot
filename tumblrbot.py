@@ -455,12 +455,12 @@ def react_to_community_post(community_handle, post_id):
         return False
 
 
-def post_from_Unsplash():
+def queue_from_Unsplash():
     # # Ask the user for the photo ID
     # photo_id = input("What is the ID of the photo you'd like to share to Tumblr? ")
 
     # Get photo info from your content bot
-    photo_info = cbot.get_photo()
+    photo_info = cbot.get_from_likes()
 
     if not photo_info:
         print("❌ Could not retrieve photo info. Aborting post.")
@@ -468,10 +468,10 @@ def post_from_Unsplash():
 
     # Build the caption with artist credit
     caption_text = (
-        f"{photo_info['caption_text']} — "
+        f"{photo_info['caption_text']} \n— "
         f"{photo_info['artist_first_name']} {photo_info['artist_last_name']} via Unsplash"
     )
- # Post the photo
+# Post the photo
     create_photo_post(
         client=client,
         blog_name=my_blog_name,
@@ -480,4 +480,4 @@ def post_from_Unsplash():
         tags=photo_info['tags']
     )
 #______________________play
-post_from_Unsplash()
+queue_from_Unsplash()

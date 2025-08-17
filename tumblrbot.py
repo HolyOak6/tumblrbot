@@ -1,5 +1,8 @@
 import random
 import sys
+import tempfile
+from io import BytesIO
+
 import pytumblr
 import time
 from dotenv import load_dotenv
@@ -469,7 +472,7 @@ def queue_from_Unsplash():
     # Build the caption with artist credit
     caption_text = (
         f"{photo_info['caption_text']} \n— "
-        f"{photo_info['artist_first_name']} {photo_info['artist_last_name']} via Unsplash"
+        f"{photo_info['artist_first_name']} {photo_info['artist_last_name']}"
     )
 # Post the photo
     create_photo_post(
@@ -479,5 +482,54 @@ def queue_from_Unsplash():
         caption=caption_text,
         tags=photo_info['tags']
     )
+
+def queue_multiple_unsplash():
+    for num in range(5, 10):
+        photo_info = cbot.get_from_likes(num)
+
+        if not photo_info:
+            print("❌ Could not retrieve photo info. Aborting post.")
+            return
+
+        # Build the caption with artist credit
+        caption_text = (
+            f"{photo_info['caption_text']} \n— "
+            f"{photo_info['artist_first_name']} {photo_info['artist_last_name']}"
+        )
+        # Post the photo
+        create_photo_post(
+            client=client,
+            blog_name=my_blog_name,
+            photo_url=photo_info['url'],
+            caption=caption_text,
+            tags=photo_info['tags']
+        )
+
+def queue_dad_joke():
+    image = cbot.combine_quote_and_image()  # PIL.Image
+    postit = input("Whould you like to post it? y or no?  ").lower()
+    if postit == "y":
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            temp_filename = tmp.name
+            image.save(temp_filename, format="PNG")
+
+        try:
+            response = client.create_photo(
+                blogname=my_blog_name,
+                state="queue",
+                tags=["dadjoke", "funny", "lol"],
+                data=temp_filename
+            )
+            print(f"✅ Photo post created: {response}")
+        except Exception as e:
+            print(f"❌ Failed to create photo post: {e}")
+        finally:
+            try:
+                os.remove(temp_filename)
+            except Exception as e:
+                print(f"⚠️ Failed to delete temp file: {e}")
+
 #______________________play
-queue_from_Unsplash()
+
+shuffle_queue()

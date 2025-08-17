@@ -3,14 +3,15 @@ import os
 from pprint import pprint
 from dotenv import load_dotenv
 import random as rd
-
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
 
 load_dotenv()
 unsp_access_key = os.getenv("UNSP_ACCESS_KEY")
 unsp_key = os.getenv("UNSP_SECRET_KEY")
 unsp_app_id = os.getenv("UNSP_APPLICATION_ID")
 unsp_username = os.getenv("UNSP_USERNAME")
-
+zenkey = os.getenv("ZENKEY")
 headers = {
     "Authorization": f"Client-ID {unsp_access_key}"
 }
@@ -33,6 +34,7 @@ stopwords = {
         "won't", "would", "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your", "yours",
         "yourself", "yourselves"
     }
+dadjokes_url= "https://icanhazdadjoke.com/"
 
 #______________________________________________________Get a photo using ID
 def get_photo():
@@ -64,7 +66,7 @@ def get_photo():
     }
     return photo_info
 
-def get_from_likes():
+def get_from_likes(n=None):
     endpoint = f"/users/{unsp_username}/likes"
     params = {
         "username" : unsp_username,
@@ -77,21 +79,121 @@ def get_from_likes():
         return None  # stop here if request fails
     else:
         photo_data = response.json()
+        if n is None:
+            n = rd.randint(0, len(photo_data) - 1)
 
-    n = rd.randint(0,9)
-    first_name = photo_data[n]["user"]["first_name"]
-    last_name = photo_data[n]["user"]["last_name"]
-    photo_url = photo_data[n]["urls"]["full"]
-    slug_parts = photo_data[n]["slug"].split("-")
+
+        first_name = photo_data[n]["user"]["first_name"]
+        last_name = photo_data[n]["user"]["last_name"]
+        photo_url = photo_data[n]["urls"]["full"]
+        slug_parts = photo_data[n]["slug"].split("-")
+        tags = [word for word in slug_parts[:-1] if word not in stopwords]
+
+        photo_info = {
+            "url": photo_url,
+            "tags": tags,  # tag processing function
+            "artist_first_name": first_name,
+            "artist_last_name": last_name,
+            "caption_text": " ".join(slug_parts[:-1])
+        }
+        print(photo_info["caption_text"])
+        return photo_info
+
+
+
+
+
+def fetch_and_resize_image(url, target_width):
+    response = requests.get(url)
+    response.raise_for_status()
+    img = Image.open(BytesIO(response.content))
+
+    # Resize to target width while keeping aspect ratio
+    w_percent = target_width / float(img.width)
+    h_size = int(float(img.height) * w_percent)
+    img = img.resize((target_width, h_size), Image.LANCZOS)
+    return img
+
+def get_random_background_image():
+    random_endpoint = "/photos/random"
+    query = "sunset, clouds, mountains, night sky, aurora, coffee cup, blossoms"
+    params = {
+        "query" : query,
+        "orientation" : "landscape"
+    }
+    try:
+        response = requests.get(url=f"https://api.unsplash.com/{random_endpoint}", headers=headers, params=params)
+        response.raise_for_status()  # Raises an exception for HTTP errors
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching photo: {e}")
+        return None  # stop here if request fails
+    else:
+        photo_data = response.json()
+
+    first_name = photo_data["user"]["first_name"]
+    last_name = photo_data["user"]["last_name"]
+    photo_url = photo_data["urls"]["full"]
+    slug_parts = photo_data["slug"].split("-")
     tags = [word for word in slug_parts[:-1] if word not in stopwords]
 
     photo_info = {
         "url": photo_url,
-        "tags": tags,  # tag processing function
+        "tags": tags,
         "artist_first_name": first_name,
         "artist_last_name": last_name,
         "caption_text": " ".join(slug_parts[:-1])
     }
     print(photo_info["caption_text"])
     return photo_info
+
+def get_dadjoke():
+    headers = {"Accept": "application/json"}
+    try:
+        response = requests.get(dadjokes_url, headers=headers)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching quote: {e}")
+        return None  # stop here if request fails
+    else:
+        return response.json()["joke"]
+
+
+
+def combine_quote_and_image():
+    bg_url = get_random_background_image()["url"]
+    joke = get_dadjoke()
+
+    # Fetch and resize the image to a consistent width
+    image = fetch_and_resize_image(bg_url, target_width=1080)
+
+    draw = ImageDraw.Draw(image)
+
+    # Start with a large font size
+    font_size = 250
+    font = ImageFont.truetype("arial.ttf", size=font_size)
+
+    # Define maximum allowed width (90% of image width)
+    max_width = image.width * 0.9
+
+    # Loop to shrink font until text fits
+    while True:
+        text_bbox = draw.textbbox((0, 0), joke, font=font)
+        text_width = text_bbox[2] - text_bbox[0]
+        if text_width <= max_width or font_size <= 10:  # stop at 10px minimum
+            break
+        font_size -= 5
+        font = ImageFont.truetype("arial.ttf", size=font_size)
+
+    # Center text
+    text_height = text_bbox[3] - text_bbox[1]
+    x = (image.width - text_width) / 2
+    y = (image.height - text_height) / 2
+
+    draw.text((x, y), joke, font=font, fill="white")
+    image.show()
+    return image
+
+
+
+
 

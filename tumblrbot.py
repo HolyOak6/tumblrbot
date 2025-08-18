@@ -82,6 +82,7 @@ consumer_secret = get_env_or_exit("TUMBLR_CONSUMER_SECRET")
 oauth_token = get_env_or_exit("oauth_token")
 oauth_token_secret = get_env_or_exit("oauth_token_secret")
 my_blog_name = get_env_or_exit("MY_BLOG_NAME")
+secondary_blog = get_env_or_exit("SECOND_BLOG")
 
 #__________________________________create client using pytumblr
 try:
@@ -114,7 +115,7 @@ tags_list = [
     "fantasy_art", "surreal",
 
     #Artists
-    "jonas kunickas", "matt bailey", "sara punt", "viktoria lapteva",
+    "jonas kunickas", "matt bailey", "sara punt", "viktoria lapteva", "Glyn Smyth", "edgar allen poe", ""
 ]
 #____________________________________________________________Basic tools
 
@@ -450,7 +451,7 @@ def queue_using_tags(tags_list):
         if is_reblog_worthy(post):
             reblog_to_queue(
                 client,
-                blog_name=my_blog_name,
+                blog_name=secondary_blog,
                 post_id=post_info['id'],
                 reblog_key=post_info['reblog_key'],
                 tags=post_info['tags']
@@ -519,7 +520,7 @@ def post_to_queue_using_own_blog_posts():
         if is_reblog_worthy(post):
             reblog_to_queue(
                 client,
-                blog_name=my_blog_name,
+                blog_name=secondary_blog,
                 post_id=post_info['id'],
                 reblog_key=post_info['reblog_key'],
                 tags=post_info['tags']
@@ -598,8 +599,9 @@ def queue_dad_joke():
        Returns:
            None
        """
-    image = cbot.combine_quote_and_image()  # PIL.Image
-    postit = input("Whould you like to post it? y or no?  ").lower()
+    image = cbot.combine_quote_and_image_Unsplash()  # PIL.Image
+    # postit = input("Whould you like to post it? y or n?  ").lower()
+    postit = "y"
     if postit == "y":
         # Create a temporary file
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
@@ -608,7 +610,7 @@ def queue_dad_joke():
 
         try:
             response = client.create_photo(
-                blogname=my_blog_name,
+                blogname=secondary_blog,
                 state="queue",
                 tags=["dadjoke", "funny", "lol"],
                 data=temp_filename
@@ -622,6 +624,95 @@ def queue_dad_joke():
             except Exception as e:
                 print(f"⚠️ Failed to delete temp file: {e}")
 
-#______________________play
+def queue_famous_quote():
+    image = cbot.combine_quote_and_image_quote()  # PIL.Image
+    # postit = input("Whould you like to post it? y or n?  ").lower()
+    postit="y"
+    if postit == "y":
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            temp_filename = tmp.name
+            image.save(temp_filename, format="PNG")
 
-queue_dad_joke()
+        try:
+            response = client.create_photo(
+                blogname=secondary_blog,
+                state="queue",
+                tags=["quote", "inspirational", "nice"],
+                data=temp_filename
+            )
+            print(f"✅ Photo post created: {response}")
+        except Exception as e:
+            print(f"❌ Failed to create photo post: {e}")
+        finally:
+            try:
+                os.remove(temp_filename)
+            except Exception as e:
+                print(f"⚠️ Failed to delete temp file: {e}")
+
+
+def queue_fact():
+    """
+       Generates a fact image and queues it as a photo post on Tumblr.
+
+       The function uses the content bot to combine a dad joke with a background image,
+       prompts the user to confirm posting, saves the image temporarily, and then creates
+       a queued photo post on the configured Tumblr blog with predefined tags. The temporary
+       file is deleted afterward.
+
+       Returns:
+           None
+       """
+    image = cbot.fact_over_image()  # PIL.Image
+    # postit = input("Whould you like to post it? y or n?  ").lower()
+    postit = "y"
+    if postit == "y":
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            temp_filename = tmp.name
+            image.save(temp_filename, format="PNG")
+
+        try:
+            response = client.create_photo(
+                blogname=secondary_blog,
+                state="queue",
+                tags=["fact", "trivia", "crazy", "woah"],
+                data=temp_filename
+            )
+            print(f"✅ Photo post created: {response}")
+        except Exception as e:
+            print(f"❌ Failed to create photo post: {e}")
+        finally:
+            try:
+                os.remove(temp_filename)
+            except Exception as e:
+                print(f"⚠️ Failed to delete temp file: {e}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#______________________add 48 curated posts and some more based on tag to queue on secondary blog
+for blah in range(0, 4):
+    queue_fact()
+    shuffle_queue(client, secondary_blog)
+    queue_famous_quote()
+    shuffle_queue(client, secondary_blog)
+    queue_dad_joke()
+    shuffle_queue(client, secondary_blog)

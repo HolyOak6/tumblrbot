@@ -4,7 +4,7 @@ import tempfile
 import tumblrbot as tbot
 import contentbot as cbot
 import geminibotter as gbot
-from PIL import Image, ImageDraw, ImageFont
+from PIL import ImageDraw, ImageFont
 
 
 class CurateBot:
@@ -52,6 +52,7 @@ class CurateBot:
         )
 
     def queue_multiple_unsplash(self, blog_name=None):
+        """Queues multiple photos from liked Unsplash images to Tumblr."""
         blog_name = blog_name or self.blog_name
         for num in range(5, 10):
             photo_info = self.cbot.get_from_likes(num)
@@ -297,6 +298,8 @@ class CurateBot:
         return image
 
     def fact_over_image(self, blog_name=None):
+        """Uses Pillow to combine random image from Unsplash and fact into a single meme.
+        Returns image as a PIL.Image object."""
         blog_name=blog_name or self.blog_name
         fact=self.cbot.get_fact()
 
@@ -346,9 +349,149 @@ class CurateBot:
         )
 
         return image
+    def curate_dad_joke_ai(self):
+        """
+        Uses Gemini to generate tags for a dad joke, then uses those tags to find a relevant
+        background image from Unsplash. Combines the joke and image into a meme-style image
+        using Pillow, and returns the image and tags.
+        """
 
 
+        # Generate image from content bot
+        joke = self.cbot.get_dadjoke()
+        tags = self.gbot.get_tags(joke, content_type="text")
+        bg_url = self.cbot.get_background_image(query=tags)["url"]
+        wrapped_joke = self.cbot.wrap_text(joke, max_chars=45)# wrap into multiple lines
 
+        # Resize image
+        image = self.cbot.fetch_and_resize_image(bg_url, target_width=1080)
+        draw = ImageDraw.Draw(image)
+
+        # Start with a large font size
+        font_size = 250
+        font = ImageFont.truetype("arial.ttf", size=font_size)
+
+        # Set max box for both width and height
+        max_width = image.width * 0.9
+        max_height = image.height * 0.9
+
+        # Shrink font until wrapped text fits inside image bounds
+        while True:
+            text_bbox = draw.multiline_textbbox((0, 0), wrapped_joke, font=font, spacing=10)
+            text_width = text_bbox[2] - text_bbox[0]
+            text_height = text_bbox[3] - text_bbox[1]
+
+            if (text_width <= max_width and text_height <= max_height) or font_size <= 10:
+                break
+
+            font_size -= 5
+            font = ImageFont.truetype("arial.ttf", size=font_size)
+
+        # Center the wrapped text
+        x = (image.width - text_width) / 2
+        y = (image.height - text_height) / 2
+
+        # Draw with stroke for readability
+        draw.multiline_text(
+            (x, y),
+            wrapped_joke,
+            font=font,
+            fill="white",
+            stroke_width=3,
+            stroke_fill="black",
+            spacing=10,
+            align="center"
+        )
+        print(image, tags)
+        return image, tags
+
+    def curate_fact_ai(self):
+        """ Uses Gemini to generate tags for a fact, then uses those tags to find a relevant
+        background image from Unsplash. Combines the fact and image into a meme-style image
+        using Pillow, and returns the image and tags."""
+
+        fact = self.cbot.get_fact()
+        tags = self.gbot.get_tags(fact, content_type="text")
+        bg_url = self.cbot.get_background_image(query=tags)["url"]
+        wrappedfact = self.cbot.wrap_text(fact)
+        print(tags)
+        print(fact)
+        print(wrappedfact)
+
+        #Resize image
+        image = self.cbot.fetch_and_resize_image(bg_url, target_width=1080)
+        draw = ImageDraw.Draw(image)
+
+        # Start with a large font size
+        font_size = 250
+        font = ImageFont.truetype("arial.ttf", size=font_size)
+
+        # Set max box for both width and height
+        max_width = image.width * 0.9
+        max_height = image.height * 0.9
+
+        # Shrink font until wrapped text fits inside image bounds
+        while True:
+            text_bbox = draw.multiline_textbbox((0, 0), wrappedfact, font=font, spacing=10)
+            text_width = text_bbox[2] - text_bbox[0]
+            text_height = text_bbox[3] - text_bbox[1]
+
+            if (text_width <= max_width and text_height <= max_height) or font_size <= 10:
+                break
+
+            font_size -= 5
+            font = ImageFont.truetype("arial.ttf", size=font_size)
+
+        # Center the wrapped text
+        x = (image.width - text_width) / 2
+        y = (image.height - text_height) / 2
+
+        # Draw with stroke for readability
+        draw.multiline_text(
+            (x, y),
+            wrappedfact,
+            font=font,
+            fill="white",
+            stroke_width=3,
+            stroke_fill="black",
+            spacing=10,
+            align="center"
+        )
+        print(image, tags)
+        return image, tags
+
+    def queue_curated_ai(self, blog_name=None, image=None, tags=None):
+        """ Uses self attributes to post curated AI content to Tumblr queue.
+        Takes optional image and tags parameters, if not provided,
+        it will generate them using curate_fact_ai method.
+        """
+        blog_name = blog_name or self.blog_name
+        if not image and not tags:
+            image, tags = self.curate_fact_ai()  # PIL.Image
+
+        # postit = input("Whould you like to post it? y or n?  ").lower()
+        postit = "y"
+        if postit == "y":
+            # Create a temporary file
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                temp_filename = tmp.name
+                image.save(temp_filename, format="PNG")
+
+            try:
+                response = self.tbot.client.create_photo(
+                    blogname=self.secondaryblog,
+                    state="queue",
+                    tags=tags,
+                    data=temp_filename
+                )
+                print(f"✅ Photo post created: {response}")
+            except Exception as e:
+                print(f"❌ Failed to create photo post: {e}")
+            finally:
+                try:
+                    os.remove(temp_filename)
+                except Exception as e:
+                    print(f"⚠️ Failed to delete temp file: {e}")
 
 
     #_____________________________Testing
@@ -358,4 +501,17 @@ tbotclient = tbot.TumblrBot()
 gbotclient = gbot.Geminibot()
 bot=CurateBot(tbotclient, gbotclient, cbotclient)
 
-# bot.queue_famous_quote()
+
+
+for i in range (6):
+
+    img, tgs = bot.curate_fact_ai()
+    bot.queue_curated_ai(image=img, tags=tgs)
+    images, tags = bot.curate_dad_joke_ai()
+    bot.queue_curated_ai(image=images, tags=tags)
+    bot.queue_from_unsplash(blog_name=os.getenv("MY_BLOG_NAME"))
+    tbotclient.megashuffle(blog_name=os.getenv("MY_BLOG_NAME"))
+    tbotclient.megashuffle(blog_name=os.getenv("SECOND_BLOG"))
+
+# images, tags = bot.curate_dad_joke_ai()
+# bot.queue_curated_ai(image=images, tags=tags)

@@ -31,8 +31,10 @@ class Geminibot:
         try:
             if response.text is not None:
                 tags = json.loads(response.text)
+                print(f"text is not none, tags {tags}")
             else:
                 tags = []
+                print(f"text is none")
         except json.JSONDecodeError:
             start = response.text.find("[")
             end = response.text.rfind("]") + 1
@@ -41,3 +43,6 @@ class Geminibot:
             except:
                 tags = []
 
+        if not tags:
+            raise ValueError("Gemini did not return any valid tags.")
+        return tags

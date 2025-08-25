@@ -84,15 +84,15 @@ tags_list = [
 ]
 blacklisted_words = [
         "spoilers", "ai art", "ai_art", "ai-generated", "generated", "ai", "machine learning",
-        "shitpost", "shitposter", "meme dump", "nsfw", "explicit", "porn", "sex", "erotic",
-        "adult", "nudity", "price", "buy", "sale", "discount", "restored", "collectible", "product",
+        "shitpost", "shitposter", "meme dump", "nsfw", "explicit", "porn", "sex", "price", "buy", "sale", "discount", "restored", "collectible", "product",
         "etsy", "amazon", "shop", "promo", "link in bio", "store", "order now", "preorder",
         "subscribe", "donate", "patreon", "paypal", "fundraiser", "crowdfunding",
         "gross", "spam", "clickbait", "viral", "giveaway", "contest", "free", "offer", "limited time",
         "trans", "lesbian", "gay", "queer", "transgender", "genderfluid", "nonbinary", "nb",
-        "http", "https", "www", ".com", ".net", ".org"
+        "http", "https", "www", ".com", ".net", ".org", "sissy"
     ]
 class TumblrBot:
+    """A bot for interacting with Tumblr's API."""
     def __init__(self):
         self.consumer_key = self.get_env_or_exit("TUMBLR_CONSUMER_KEY")
         self.consumer_secret = self.get_env_or_exit("TUMBLR_CONSUMER_SECRET")
@@ -123,6 +123,8 @@ class TumblrBot:
             sys.exit(1)
 
     def get_env_or_exit(self, var_name):
+        """Get environment variable or exit if not found."""
+
         value = os.getenv(var_name)
         if not value:
             print(f"No {var_name} found!")
@@ -316,6 +318,7 @@ class TumblrBot:
 
 
     def get_posts_using_random_tag_from_list(self, tags, num):
+        """Grab posts using a random tag from a provided list."""
         tags= tags
         tag = random.choice(tags)
 
@@ -339,6 +342,7 @@ class TumblrBot:
 
 
     def grab_own_posts(self, blog_name=None):
+        """Grab own posts from specified blog."""
         blog_name = blog_name or self.my_blog_name
         offset = random.randint(40, 54)
         print(f"Grabbing posts from {blog_name} with offset: {offset}")
@@ -356,6 +360,7 @@ class TumblrBot:
 
 
     def mass_like(self, tags, num):
+        """Grab posts using a random tag from a list and like them."""
         response = self.get_posts_using_random_tag_from_list(tags=tags, num=num)
         jsonated_response = response.json()
         posts=jsonated_response['response']
@@ -434,6 +439,7 @@ class TumblrBot:
     #_____________________________________________get and reblog_to_queue
 
     def queue_using_tags(self, tags_list, blogtoqueueto):
+        """Grab posts using a random tag from a list and reblog to queue."""
         blog_name = blogtoqueueto or self.secondary_blog
         response = self.get_posts_using_random_tag_from_list(tags_list, 20)
         jsonated_response = response.json()
@@ -458,6 +464,9 @@ class TumblrBot:
         # shuffle_queue(client, my_blog_name)
 
     def queue_using_single_tag(self, tag, num, blog_name=None):
+        """Grab posts using a single tag and reblog to queue.
+
+        """
         blog_name = blog_name or self.my_blog_name
         response = self.get_posts_using_single_tag(tag, num)
         jsonated_response = response.json()
@@ -483,6 +492,7 @@ class TumblrBot:
                 self.like_post( post_info['id'], reblog_key=post_info['id'])
 
     def post_to_queue_using_likes(self, blog_name):
+        """Grab liked posts and reblog to queue."""
         posts = self.grab_liked_posts()
         blog_name = blog_name or self.secondary_blog
         for post in posts:
@@ -504,6 +514,7 @@ class TumblrBot:
         # shuffle_queue(client, my_blog_name)
 
     def post_to_queue_using_own_blog_posts(self, blog_name=None):
+        """Grab own posts and reblog to queue."""
         blog_name = blog_name or self.my_blog_name
         posts = self.grab_own_posts(blog_name)
 
@@ -529,6 +540,7 @@ class TumblrBot:
 
 
     def megashuffle(self, blog_name=None):
+        """Shuffle the queue multiple times to ensure randomness."""
         blog_name = blog_name or self.my_blog_name
         for num in range(0,15):
             self.shuffle_queue(blog_name)

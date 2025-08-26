@@ -1,7 +1,5 @@
 import random
 import sys
-
-
 import pytumblr
 import time
 from dotenv import load_dotenv
@@ -67,14 +65,13 @@ access_token_url= "https://www.tumblr.com/oauth/access_token"
 # response = oauth.get('https://api.tumblr.com/v2/user/dashboard')
 # print("Response Status:", response.status_code)
 
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++Get env variables
+#___________________________Default Variables________________________________________________
 tags_list = [
     "dark_fantasy", "gothic", "dark_love", "dark_passion", "skull_aesthetic", "dark_mind", "gothic_love",
     "dark_beauty", "goth_alternative",
 
     # Synonyms / aesthetic adjacents
     "romantic_goth", "dark_romanticism",  "ethereal_dark",
-
 
     # Fantasy & nerd-culture
     "fantasy_art", "surreal",
@@ -91,8 +88,13 @@ blacklisted_words = [
         "trans", "lesbian", "gay", "queer", "transgender", "genderfluid", "nonbinary", "nb",
         "http", "https", "www", ".com", ".net", ".org", "sissy"
     ]
+
+
 class TumblrBot:
     """A bot for interacting with Tumblr's API."""
+    """Initializes the TumblrBot with necessary credentials and sets up the Tumblr client.
+    Loads configuration from environment variables and prepares the client for API interactions.
+    """
     def __init__(self):
         self.consumer_key = self.get_env_or_exit("TUMBLR_CONSUMER_KEY")
         self.consumer_secret = self.get_env_or_exit("TUMBLR_CONSUMER_SECRET")
@@ -132,6 +134,15 @@ class TumblrBot:
         return value
 
     def queue_photo_post(self, blog_name, tags, filepath):
+        """Queue a photo post on a specified Tumblr blog.
+        Parameters:
+            blog_name (str): The name of the blog where the post will be published.
+            tags (list of str): A list of tags to attach to the post.
+            filepath (str): The local file path to the photo to be uploaded.
+        Returns:
+            dict: The API response if the post was successfully created.
+            """
+
         blog_name = blog_name or self.secondary_blog
         return self.client.create_photo(
             blogname=blog_name,
@@ -231,8 +242,13 @@ class TumblrBot:
     def like_post(self, post_id, reblog_key):
         """
             likes post
-            post_id: id of the posted wanting to like.
-            reblog_key: key used to reblog or like desired post.
+
+            Parameters:
+                post_id: id of the posted wanting to like.
+                reblog_key: key used to reblog or like desired post.
+
+            Returns:
+                dict: The API response if the like was successful.
         """
         return self.client.like(post_id, reblog_key)
 
@@ -270,6 +286,18 @@ class TumblrBot:
 
 
     def reblog_to_queue(self, post_id, reblog_key, tags=None, blog_name=None):
+        """Reblogs a post to the queue of a specified blog.
+        Parameters:
+            post_id (int): The ID of the post to be reblogged.
+            reblog_key (str): The reblog key of the post to be reblogged.
+            tags (list of str, optional): A list of tags to attach to the reblogged post.
+            blog_name (str, optional): The name of the blog where the post will be reblogged.
+                Defaults to self.my_blog_name.
+        Returns:
+            dict: The API response if the reblog was successful.
+
+            """
+
         blog_name = blog_name or self.my_blog_name
 
         kwargs = {
@@ -283,6 +311,14 @@ class TumblrBot:
 
     #_________________________________________________Acquiring posts from Tumblr
     def grab_liked_posts(self):
+
+        """Grab liked posts.
+         Grabs 20 posts, random offset between 2 and 54 to avoid always getting the same posts.
+        Returns:
+            list: A list of liked posts or NONE if an error occurs.
+
+
+        """
         offset = random.randint(2, 54)
         try:
             response = self.client.likes(limit=20, offset=offset)
@@ -296,6 +332,14 @@ class TumblrBot:
             return None
 
     def get_posts_using_single_tag(self, tag, num):
+
+        """Grab posts using a single tag.
+        Parameters:
+            tag (str): The tag to search for.
+            num (int): The number of posts to retrieve (max 20).
+        Returns:
+            Response object: The API response containing the posts.
+        """
 
         session = OAuth1Session(
             self.consumer_key,
@@ -318,7 +362,14 @@ class TumblrBot:
 
 
     def get_posts_using_random_tag_from_list(self, tags, num):
-        """Grab posts using a random tag from a provided list."""
+        """Grab posts using a random tag from a provided list.
+        Parameters:
+            tags (list of str): A list of tags to choose from.
+            num (int): The number of posts to retrieve (max 20).
+        Returns:
+            Response object: The API response containing the posts.
+            """
+
         tags= tags
         tag = random.choice(tags)
 
@@ -342,7 +393,13 @@ class TumblrBot:
 
 
     def grab_own_posts(self, blog_name=None):
-        """Grab own posts from specified blog."""
+        """Grab own posts from specified blog.
+        Parameters:
+            blog_name (str, optional): The name of the blog to fetch posts from.
+                Defaults to self.my_blog_name.
+        Returns:
+            list: A list of own posts or NONE if an error occurs.
+        """
         blog_name = blog_name or self.my_blog_name
         offset = random.randint(40, 54)
         print(f"Grabbing posts from {blog_name} with offset: {offset}")
@@ -360,7 +417,12 @@ class TumblrBot:
 
 
     def mass_like(self, tags, num):
-        """Grab posts using a random tag from a list and like them."""
+        """Grab posts using a random tag from a list and like them.
+        Parameters:
+            tags (list of str): A list of tags to choose from.
+            num (int): The number of posts to retrieve (max 20).
+            """
+
         response = self.get_posts_using_random_tag_from_list(tags=tags, num=num)
         jsonated_response = response.json()
         posts=jsonated_response['response']
@@ -439,7 +501,11 @@ class TumblrBot:
     #_____________________________________________get and reblog_to_queue
 
     def queue_using_tags(self, tags_list, blogtoqueueto):
-        """Grab posts using a random tag from a list and reblog to queue."""
+        """Grab posts using a random tag from a list and reblog to queue.
+        Parameters:
+            tags_list (list of str): A list of tags to choose from.
+            blogtoqueueto (str): The name of the blog where the post will be reblogged.
+        """
         blog_name = blogtoqueueto or self.secondary_blog
         response = self.get_posts_using_random_tag_from_list(tags_list, 20)
         jsonated_response = response.json()
@@ -465,8 +531,12 @@ class TumblrBot:
 
     def queue_using_single_tag(self, tag, num, blog_name=None):
         """Grab posts using a single tag and reblog to queue.
-
-        """
+        Parameters:
+            tag (str): The tag to search for.
+            num (int): The number of posts to retrieve (max 20).
+            blog_name (str, optional): The name of the blog where the post will be reblogged.
+                Defaults to self.my_blog_name.
+            """
         blog_name = blog_name or self.my_blog_name
         response = self.get_posts_using_single_tag(tag, num)
         jsonated_response = response.json()
@@ -491,8 +561,12 @@ class TumblrBot:
         # shuffle_queue(client, my_blog_name)
                 self.like_post( post_info['id'], reblog_key=post_info['id'])
 
-    def post_to_queue_using_likes(self, blog_name):
-        """Grab liked posts and reblog to queue."""
+    def post_to_queue_using_likes(self, blog_name=None):
+        """Grab liked posts and reblog to queue.
+        Parameters:
+            blog_name (str): The name of the blog where the post will be reblogged.
+            defaults to self.blogname if none provided.
+        """
         posts = self.grab_liked_posts()
         blog_name = blog_name or self.secondary_blog
         for post in posts:
@@ -514,7 +588,11 @@ class TumblrBot:
         # shuffle_queue(client, my_blog_name)
 
     def post_to_queue_using_own_blog_posts(self, blog_name=None):
-        """Grab own posts and reblog to queue."""
+        """Grab own posts and reblog to queue.
+        Parameters:
+            blog_name (str): The name of the blog where the post will be reblogged.
+            defaults to self.blogname if none provided.
+            """
         blog_name = blog_name or self.my_blog_name
         posts = self.grab_own_posts(blog_name)
 

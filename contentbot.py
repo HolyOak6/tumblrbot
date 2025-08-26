@@ -5,8 +5,8 @@ import random as rd
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
-
 load_dotenv()
+"""Load environment variables from a .env file."""
 unsp_access_key = os.getenv("UNSP_ACCESS_KEY")
 unsp_key = os.getenv("UNSP_SECRET_KEY")
 unsp_app_id = os.getenv("UNSP_APPLICATION_ID")
@@ -15,6 +15,7 @@ ninja_key = os.getenv("NINJA_KEY")
 headers = {
     "Authorization": f"Client-ID {unsp_access_key}"
 }
+"""Common English stopwords to filter out from tags."""
 stopwords = {
         "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are",
         "aren't", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both",
@@ -37,6 +38,10 @@ stopwords = {
 
 
 class ContentBot:
+    """A bot that fetches content from various APIs, including Unsplash for images,
+    icanhazdadjoke for jokes, and api-ninjas for facts. It
+    can also generate captions and process images.
+    """
     def __init__(self):
         self.jokeapi = "https://icanhazdadjoke.com/"
         self.factapi = "http://api.api-ninjas.com/v1/facts"
@@ -50,11 +55,18 @@ class ContentBot:
 
 
 
-
-
 #______________________________________________________Get a photo using ID
     def get_photo(self, photo_id=None):
-        """gets a photo from unsplash based on that photo's id (found at the end of the photo's url)"""
+        """gets a photo from unsplash based on that photo's id (found at the end of the photo's url)
+        returns a dictionary with keys:
+            url - the url of the photo
+            tags - a list of tags associated with the photo
+            artist_first_name - first name of the artist
+            artist_last_name - last name of the artist
+            caption_text - a caption based on the photo's slug
+        If no photo_id is provided, prompts the user to input one.
+
+        """
         if not photo_id:
             photo_id = input("What is the ID of the photo you'd like?       ")
         # photo_id = "NuHrMrC5rlk"
@@ -87,7 +99,15 @@ class ContentBot:
         return photo_info
 
     def get_from_likes(self, n=None):
-
+        """Fetch a photo from the user's liked photos on Unsplash.
+        If n is None, a random photo is selected.
+        Returns a dictionary with keys
+        url - the url of the photo
+        tags - a list of tags associated with the photo
+        artist_first_name - first name of the artist
+        artist_last_name - last name of the artist
+        caption_text - a caption based on the photo's slug
+        """
         endpoint = f"/users/{self.unspusername}/likes"
         all_photos = []
         page = 1
@@ -140,6 +160,19 @@ class ContentBot:
 
 
     def fetch_and_resize_image(self, url, target_width):
+        """
+        Fetch an image from a URL and resize it to the target width while maintaining aspect ratio.
+        Returns a PIL Image object.
+        1. Fetch the image from the URL.
+        2. Open the image using PIL.
+        3. Calculate the new height to maintain aspect ratio.
+        4. Resize the image using high-quality resampling.
+        5. Return the resized image.
+        6. Raise an exception if the image cannot be fetched.
+        7. Use Image.LANCZOS for high-quality downsampling.
+        8. Handle any request errors gracefully.
+        """
+
         response = requests.get(url)
         response.raise_for_status()
         img = Image.open(BytesIO(response.content))
@@ -151,7 +184,24 @@ class ContentBot:
         return img
 
     def get_background_image(self, query=None):
-        """from Unsplash"""
+        """Fetch a random photo from Unsplash based on a query or a list of queries.
+        If no query is provided, a default list of queries is used.
+        Returns a dictionary with keys:
+            url - the url of the photo
+            tags - a list of tags associated with the photo
+            artist_first_name - first name of the artist
+            artist_last_name - last name of the artist
+            caption_text - a caption based on the photo's slug
+        1. If no query is provided, use a default list of queries.
+        2. If a single string is provided, convert it to a list.
+        3. Randomly select a query from the list.
+        4. Make a request to the Unsplash random photo endpoint with the selected query.
+        5. Extract relevant information from the response.
+        6. Return the information as a dictionary.
+        7. Handle any request errors gracefully.
+        8. Filter out common stopwords from the tags.
+        9. Print the caption text for debugging purposes.
+        """
         random_endpoint = "/photos/random"
 
         # Default list of queries
@@ -195,7 +245,8 @@ class ContentBot:
 
     def get_dadjoke(self):
         """Retrieve dad joke from icanhazdadjoke api
-            returns joke as string"""
+            returns joke as string
+            """
         jokeheaders = {"Accept": "application/json"}
         try:
             response = requests.get(self.jokeapi, headers=jokeheaders)
@@ -212,7 +263,15 @@ class ContentBot:
 
 
     def wrap_text(self, text, max_chars=45):
-        """Wrap text into multiple lines without breaking words."""
+        """Wrap text into multiple lines without breaking words.
+        1. Split the text into words.
+        2. Iterate through the words and build lines.
+        3. If adding a word exceeds max_chars, start a new line.
+        4. Join the lines with newline characters and return the result.
+        5. Ensure no line exceeds max_chars.
+        6. Handle edge cases like very long words gracefully.
+        7. Maintain original spacing between words.
+        8. Return the wrapped text as a single string."""
         words = text.split()
         lines, current_line = [], ""
 
@@ -232,6 +291,16 @@ class ContentBot:
         return "\n".join(lines)
 
     def get_random_quotes(self, limit=1):
+        """Fetch random quotes from the RealInspire API.
+        1. Make a GET request to the RealInspire API with the specified limit.
+        2. Parse the JSON response to extract quotes.
+        3. Return the first quote's content if available.
+        4. Handle any request errors gracefully.
+        5. Use a timeout to avoid hanging requests.
+        6. Validate the response status code.
+        7. Return None if no quotes are found or an error occurs.
+        8. Print error messages for debugging purposes.
+        """
         quoteurl = f"https://api.realinspire.live/v1/quotes/random?limit={limit}"
         try:
             response = requests.get(quoteurl, timeout=10)
@@ -244,6 +313,8 @@ class ContentBot:
             return None
 
     def get_fact(self):
+        """Retrieve a random fact from the api-ninjas facts API.
+        Returns the fact as a string."""
         facturl = self.factapi
         factheaders = {"X-Api-Key": self.ninjakey}
         response = requests.get(url=facturl, headers=factheaders).json()

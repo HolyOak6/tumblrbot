@@ -8,6 +8,14 @@ from PIL import ImageDraw, ImageFont
 
 
 class CurateBot:
+    """A bot that curates and posts content to Tumblr using various content sources and AI.
+    Attributes:
+        tbot (TumblrBot): An instance of the TumblrBot class for posting to Tumblr.
+        cbot (ContentBot): An instance of the ContentBot class for fetching content.
+        gbot (Geminibot): An instance of the Geminibot class for AI-generated tags.
+        blog_name (str): The name of the primary Tumblr blog to post to.
+        secondaryblog (str): The name of the secondary Tumblr blog to post to.
+        """
     def __init__(self, tumblr_client, gemini_client, content_client):
         self.tbot = tumblr_client
         self.cbot = content_client
@@ -107,6 +115,7 @@ class CurateBot:
                     print(f"⚠️ Failed to delete temp file: {e}")
 
     def queue_famous_quote(self, blog_name=None):
+        """Generates a quote image and queues it as a photo post on Tumblr."""
         blog_name = blog_name or self.blog_name
 
         # Let the content bot do the content generation
@@ -143,11 +152,8 @@ class CurateBot:
            prompts the user to confirm posting, saves the image temporarily, and then creates
            a queued photo post on the configured Tumblr blog with predefined tags. The temporary
            file is deleted afterward.
-
-           Returns:
-               None
            """
-        blog_name = blog_name or self.blog_name
+        blog_name = blog_name or self.secondaryblog
         image = self.fact_over_image()  # PIL.Image
         # postit = input("Whould you like to post it? y or n?  ").lower()
         postit = "y"
@@ -159,7 +165,7 @@ class CurateBot:
 
             try:
                 response = self.tbot.client.create_photo(
-                    blogname=self.secondaryblog,
+                    blogname=blog_name,
                     state="queue",
                     tags=["fact", "trivia", "crazy", "woah"],
                     data=temp_filename
@@ -191,7 +197,17 @@ class CurateBot:
 
     def combine_quote_and_image_Unsplash(self, blog_name=None):
         """Uses Pillow to combine random image from Unsplash and dad joke into a single meme.
-        Returns image as a PIL.Image object."""
+        Returns image as a PIL.Image object.
+        1. Fetch a random background image from Unsplash.
+        2. Fetch a random dad joke.
+        3. Wrap the joke text to fit within a certain width.
+        4. Resize the image to a target width while maintaining aspect ratio.
+        5. Dynamically adjust font size to ensure the wrapped text fits within the image bounds.
+        6. Center the text on the image and draw it with a stroke for readability.
+        7. Return the final image as a PIL.Image object.
+        8. If no image is found with main query, fallback to default query.
+
+        """
 
         # Try your main query first, fallback to default if None
         bg_data = self.cbot.get_background_image(query=["laughing, laugh, sky, clouds, party, fun, sunset, stars"])
@@ -245,10 +261,19 @@ class CurateBot:
 
         return image
 
-    def combine_quote_and_image_quote(self, blog_name=None):
+    def combine_quote_and_image_quote(self):
         """Uses Pillow to combine a random image from Unsplash and a quote into a single meme.
-        Returns image as a PIL.Image object."""
-        blog_name = blog_name or self.blog_name
+        Returns image as a PIL.Image object.
+        1. Fetch a random background image from Unsplash.
+        2. Fetch a random quote.
+        3. Wrap the quote text to fit within a certain width.
+        4. Resize the image to a target width while maintaining aspect ratio.
+        5. Dynamically adjust font size to ensure the wrapped text fits within the image bounds.
+        6. Center the text on the image and draw it with a stroke for readability.
+        7. Return the final image as a PIL.Image object.
+
+        """
+
         bg_url = self.cbot.get_background_image()["url"]
         quote = self.cbot.get_random_quotes(1)
 
@@ -299,7 +324,17 @@ class CurateBot:
 
     def fact_over_image(self, blog_name=None):
         """Uses Pillow to combine random image from Unsplash and fact into a single meme.
-        Returns image as a PIL.Image object."""
+        Returns image as a PIL.Image object.
+        1. Fetch a random background image from Unsplash.
+        2. Fetch a random fact.
+        3. Wrap the fact text to fit within a certain width.
+        4. Resize the image to a target width while maintaining aspect ratio.
+        5. Dynamically adjust font size to ensure the wrapped text fits within the image bounds.
+        6. Center the text on the image and draw it with a stroke for readability.
+        7. Return the final image as a PIL.Image object.
+        8. If no image is found with main query, fallback to default query.
+
+        """
         blog_name=blog_name or self.blog_name
         fact=self.cbot.get_fact()
 
@@ -347,13 +382,21 @@ class CurateBot:
             spacing=10,
             align="center"
         )
-
         return image
+
     def curate_dad_joke_ai(self):
         """
         Uses Gemini to generate tags for a dad joke, then uses those tags to find a relevant
         background image from Unsplash. Combines the joke and image into a meme-style image
         using Pillow, and returns the image and tags.
+        1. Fetch a random dad joke.
+        2. Use Gemini to generate relevant tags for the joke.
+        3. Use the tags to search Unsplash for a fitting background image.
+        4. Wrap the joke text to fit within a certain width.
+        5. Resize the image to a target width while maintaining aspect ratio.
+        6. Dynamically adjust font size to ensure the wrapped text fits within the image bounds.
+        7. Center the text on the image and draw it with a stroke for readability.
+        8. Return the final image as a PIL.Image object along with the generated tags.
         """
 
 
@@ -408,7 +451,17 @@ class CurateBot:
     def curate_fact_ai(self):
         """ Uses Gemini to generate tags for a fact, then uses those tags to find a relevant
         background image from Unsplash. Combines the fact and image into a meme-style image
-        using Pillow, and returns the image and tags."""
+        using Pillow, and returns the image and tags.
+        1. Fetch a random fact.
+        2. Use Gemini to generate relevant tags for the fact.
+        3. Use the tags to search Unsplash for a fitting background image.
+        4. Wrap the fact text to fit within a certain width.
+        5. Resize the image to a target width while maintaining aspect ratio.
+        6. Dynamically adjust font size to ensure the wrapped text fits within the image bounds.
+        7. Center the text on the image and draw it with a stroke for readability.
+        8. Return the final image as a PIL.Image object along with the generated tags.
+
+        """
 
         fact = self.cbot.get_fact()
         tags = self.gbot.get_tags(fact, content_type="text")
@@ -464,6 +517,12 @@ class CurateBot:
         """ Uses self attributes to post curated AI content to Tumblr queue.
         Takes optional image and tags parameters, if not provided,
         it will generate them using curate_fact_ai method.
+
+        1. If image and tags are not provided, generate them using curate_fact_ai.
+        2. Prompt user for confirmation to post.
+        3. Save the image to a temporary file.
+        4. Create a queued photo post on the configured Tumblr blog with the image and tags.
+        5. Delete the temporary file after posting.
         """
         blog_name = blog_name or self.blog_name
         if not image and not tags:
